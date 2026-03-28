@@ -1,7 +1,7 @@
 dependencies {
     implementation("com.google.code.gson:gson:2.13.2")
 
-    implementation("io.vertx:vertx-json-schema:4.5.26")
+    implementation("io.vertx:vertx-json-schema:5.0.10")
     implementation("com.squareup:javapoet:1.13.0")
     implementation("org.jetbrains:annotations:26.1.0")
 
