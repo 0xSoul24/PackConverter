@@ -1,7 +1,7 @@
 plugins {
     `java-library`
     application
-    id("com.github.johnrengelman.shadow") apply true
+    id("com.gradleup.shadow") apply true
 }
 
 sourceSets {
@@ -23,6 +23,7 @@ application {
     mainClass.set("org.geysermc.pack.converter.bootstrap.Main")
 }
 
-tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
-    archiveFileName.set("Thunder.jar")
+tasks.named("shadowJar") {
+    // Only set the archiveFileName property, as destinationDirectory is not available
+    (this as Jar).archiveFileName.set("Thunder.jar")
 }
