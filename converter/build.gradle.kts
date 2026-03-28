@@ -25,8 +25,8 @@ dependencies {
     api("com.github.GeyserMC.unnamed-creative:creative-api:817fa982c4")
     api("com.github.GeyserMC.unnamed-creative:creative-serializer-minecraft:817fa982c4")
 
-    compileOnly("com.google.auto.service:auto-service:1.0.1")
-    annotationProcessor("com.google.auto.service:auto-service:1.0.1")
+    compileOnly("com.google.auto.service:auto-service:1.1.1")
+    annotationProcessor("com.google.auto.service:auto-service:1.1.1")
 }
 
 java {
