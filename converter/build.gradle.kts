@@ -17,7 +17,7 @@ dependencies {
     implementation("commons-io:commons-io:2.11.0")
     implementation("com.twelvemonkeys.imageio:imageio-tga:3.9.4")
     implementation("com.nukkitx.fastutil:fastutil-int-object-maps:8.5.3")
-    api("net.kyori:adventure-api:4.14.0")
+    api("net.kyori:adventure-api:4.26.1")
     api("net.kyori:adventure-text-serializer-gson:4.14.0")
     api("net.kyori:adventure-text-serializer-legacy:4.14.0")
 //    api("team.unnamed:creative-api:1.8.4-SNAPSHOT")
