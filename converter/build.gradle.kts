@@ -1,5 +1,5 @@
 plugins {
-    id("io.freefair.lombok") version "8.6"
+    id("io.freefair.lombok") version "9.2.0"
 }
 
 sourceSets {
