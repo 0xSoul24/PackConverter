@@ -3,7 +3,7 @@ dependencies {
 
     implementation("io.vertx:vertx-json-schema:4.4.1")
     implementation("com.squareup:javapoet:1.13.0")
-    implementation("org.jetbrains:annotations:24.0.1")
+    implementation("org.jetbrains:annotations:26.1.0")
 
     implementation("org.apache.commons:commons-lang3:3.12.0")
     implementation("org.apache.commons:commons-text:1.10.0")
