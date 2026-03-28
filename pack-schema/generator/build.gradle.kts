@@ -1,5 +1,5 @@
 dependencies {
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.13.2")
 
     implementation("io.vertx:vertx-json-schema:4.4.1")
     implementation("com.squareup:javapoet:1.13.0")
