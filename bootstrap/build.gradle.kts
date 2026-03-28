@@ -14,7 +14,7 @@ sourceSets {
 
 dependencies {
     api(project(":converter"))
-    implementation("com.twelvemonkeys.imageio:imageio-tga:3.9.4")
+    implementation("com.twelvemonkeys.imageio:imageio-tga:3.13.1")
     implementation("com.formdev:flatlaf:3.7.1")
     implementation("com.formdev:flatlaf-intellij-themes:3.7.1")
 }
