@@ -29,11 +29,7 @@ package org.geysermc.pack.converter;
 import org.apache.commons.io.file.PathUtils;
 import org.geysermc.pack.bedrock.resource.BedrockResourcePack;
 import org.geysermc.pack.converter.pipeline.ConverterPipeline;
-import org.geysermc.pack.converter.util.DefaultLogListener;
-import org.geysermc.pack.converter.util.LogListener;
-import org.geysermc.pack.converter.util.NioDirectoryFileTreeReader;
-import org.geysermc.pack.converter.util.VanillaPackProvider;
-import org.geysermc.pack.converter.util.ZipUtils;
+import org.geysermc.pack.converter.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import team.unnamed.creative.ResourcePack;
@@ -41,10 +37,10 @@ import team.unnamed.creative.serialize.minecraft.MinecraftResourcePackReader;
 
 import javax.imageio.ImageIO;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -279,8 +275,58 @@ public final class PackConverter {
 
             this.tmpDir = this.output.toAbsolutePath().getParent().resolve(this.output.getFileName() + "_mcpack/");
 
-            ResourcePack javaResourcePack = this.compressed ? MinecraftResourcePackReader.minecraft().readFromZipFile(this.input) : MinecraftResourcePackReader.minecraft().read(NioDirectoryFileTreeReader.read(this.input));
-            ResourcePack vanillaResourcePack = MinecraftResourcePackReader.minecraft().readFromZipFile(vanillaPackPath);
+            ResourcePack javaResourcePack;
+            // Some resource packs may include model transform types not supported by the
+            // creative library (for example: "on_shelf"). The reader will attempt to
+            // parse those values as enum constants and will throw an IllegalArgumentException.
+            // To work around this, copy the input (zip or directory) to a temporary
+            // directory and replace unsupported transform keys in model JSON files
+            // before asking the reader to load the pack.
+            Path preparedInput = null;
+            try {
+                preparedInput = Files.createTempDirectory("packconverter_input_");
+                // Copy all files from the input filesystem to the temp dir, performing
+                // JSON replacements for model files that contain the unsupported key.
+                copyAndReplaceTransforms(input, preparedInput);
+
+                javaResourcePack = MinecraftResourcePackReader.minecraft().read(NioDirectoryFileTreeReader.read(preparedInput));
+            } catch (Exception ex) {
+                // The underlying reader may throw NullPointerException or other runtime exceptions
+                // when `pack.mcmeta` is missing or malformed. Wrap with a clearer message.
+                logListener.error("Failed to read Java Edition resource pack. Ensure 'pack.mcmeta' exists and contains a valid 'pack' object with 'pack_format' integer.");
+                throw new IOException("Failed to read Java Edition resource pack: " + ex.getMessage(), ex);
+            } finally {
+                if (preparedInput != null) {
+                    try {
+                        // Cleanup the prepared input directory
+                        PathUtils.delete(preparedInput);
+                    } catch (IOException ignored) {
+                    }
+                }
+            }
+            ResourcePack vanillaResourcePack;
+            Path preparedVanilla = null;
+            try {
+                // Prepare a temporary copy of the vanilla pack and replace unsupported model transforms
+                preparedVanilla = Files.createTempDirectory("packconverter_vanilla_");
+
+                try (FileSystem fs = FileSystems.newFileSystem(vanillaPackPath, Collections.emptyMap())) {
+                    Path root = fs.getPath("/");
+                    copyAndReplaceTransforms(root, preparedVanilla);
+                }
+
+                vanillaResourcePack = MinecraftResourcePackReader.minecraft().read(NioDirectoryFileTreeReader.read(preparedVanilla));
+            } catch (Exception ex) {
+                logListener.error("Failed to read vanilla resource pack at " + vanillaPackPath + ". Ensure the file exists and is a valid resource pack zip.");
+                throw new IOException("Failed to read vanilla resource pack: " + ex.getMessage(), ex);
+            } finally {
+                if (preparedVanilla != null) {
+                    try {
+                        PathUtils.delete(preparedVanilla);
+                    } catch (IOException ignored) {
+                    }
+                }
+            }
             BedrockResourcePack bedrockResourcePack = new BedrockResourcePack(this.tmpDir);
 
             int errors = converters.stream()
@@ -302,6 +348,39 @@ public final class PackConverter {
         });
 
         return this;
+    }
+
+    /**
+     * Copies all files from the given root to the destination directory. If a file
+     * looks like a model JSON (in a `models` directory and ending with .json), it
+     * will replace the literal token "on_shelf" with "fixed" to avoid enum
+     * deserialization errors in the creative library.
+     */
+    private void copyAndReplaceTransforms(Path root, Path dest) throws IOException {
+        List<Path> paths;
+        try (var stream = Files.walk(root)) {
+            paths = stream.toList();
+        }
+
+        for (Path src : paths) {
+            Path rel = root.relativize(src);
+            Path out = dest.resolve(rel.toString());
+            if (Files.isDirectory(src)) {
+                Files.createDirectories(out);
+                continue;
+            }
+
+            boolean isModelJson = src.getFileName() != null && src.getFileName().toString().endsWith(".json")
+                    && (rel.toString().contains("models") || rel.getNameCount() > 1 && rel.getName(rel.getNameCount()-2).toString().equals("models"));
+
+            if (isModelJson) {
+                String content = Files.readString(src, StandardCharsets.UTF_8);
+                String replaced = content.replace("\"on_shelf\"", "\"fixed\"");
+                Files.writeString(out, replaced, StandardCharsets.UTF_8);
+            } else {
+                Files.copy(src, out);
+            }
+        }
     }
 
     /**
